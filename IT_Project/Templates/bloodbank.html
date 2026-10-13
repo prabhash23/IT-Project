@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page">
+  <div class="page-head">
+    <div><h1>🩸 Blood bank availability</h1>
+      <p class="muted">Simulated real-time stock (demo). Orders placed from a patient case
+        deduct units here.</p></div>
+    <button id="refresh" class="btn">Refresh</button>
+  </div>
+  <div id="stock" class="blood-grid"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/bloodbank.js' %}"></script>
+{% endblock %}

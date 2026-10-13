@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page">
+  <div class="page-head">
+    <div>
+      <h1>ICU / High Dependency</h1>
+      <p class="muted">Admitted ICU patients — this demo covers the ICU ward only</p>
+    </div>
+    <button id="admitBtn" class="btn btn-primary" hidden>+ Admit patient</button>
+  </div>
+  <div id="admitDialog" class="dialog-backdrop" hidden>
+    <div class="dialog">
+      <h3>Admit new patient (demo)</h3>
+      <p id="admitError" class="error" hidden></p>
+      <input id="adName" placeholder="Patient name" />
+      <input id="adAge" inputmode="numeric" placeholder="Age" />
+      <select id="adSex"><option value="F">Female</option><option value="M">Male</option><option value="O">Other</option></select>
+      <input id="adBed" placeholder="Bed (e.g. ICU-15)" />
+      <textarea id="adReason" placeholder="Reason for admission"></textarea>
+      <div class="row">
+        <button id="admitSave" class="btn btn-primary">Admit patient</button>
+        <button id="admitCancel" class="btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div id="patients" class="cards"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/ward.js' %}"></script>
+{% endblock %}

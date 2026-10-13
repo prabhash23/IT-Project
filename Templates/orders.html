@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page">
+  <div class="page-head">
+    <div><h1>Order queue</h1>
+      <p class="muted">Everything sent to pharmacy and to the blood bank (demo).</p></div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="pharmacy">Pharmacy <span id="phCount"></span></button>
+    <button class="tab" data-tab="blood">Blood bank <span id="blCount"></span></button>
+  </div>
+  <div id="pharmacy" class="tab-page"></div>
+  <div id="blood" class="tab-page" hidden></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/orders.js' %}"></script>
+{% endblock %}

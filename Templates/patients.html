@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page">
+  <div class="top-nav-row">
+    <a class="back-link" href="/ward/">← Back To Ward</a>
+    <div class="row" style="gap:8px;">
+      <button id="statusBtn" class="btn btn-primary" hidden>Update Health Status</button>
+      <button id="dischargeBtn" class="btn" hidden>Discharge Patient</button>
+      <button id="summaryBtn" class="btn btn-summary">📄 Case Summary</button>
+    </div>
+  </div>
+
+  <div id="head"></div>
+
+  <div class="page-head">
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="visits">Doctor Visits</button>
+      <button class="tab" data-tab="prescriptions">Medicines</button>
+      <button class="tab" data-tab="tests">Tests &amp; Results</button>
+      <button class="tab" data-tab="notes">Nursing Notes</button>
+      <button class="tab" data-tab="orders">Orders</button>
+    </div>
+  </div>
+
+  <div id="visits" class="tab-page"></div>
+  <div id="prescriptions" class="tab-page" hidden></div>
+  <div id="tests" class="tab-page" hidden></div>
+  <div id="notes" class="tab-page" hidden></div>
+  <div id="orders" class="tab-page" hidden></div>
+</section>
+
+<!-- Case Summary Dialog -->
+<div id="summaryDialog" class="dialog-backdrop" hidden>
+  <div class="dialog dialog-large">
+    <div class="dialog-head">
+      <h3 id="summaryTitle">Patient Case Summary</h3>
+      <button class="btn btn-close" id="summaryClose">✕</button>
+    </div>
+    <div id="summaryBody" class="summary-body"></div>
+    <div class="row" style="justify-content: flex-end; gap: 8px; margin-top: 14px;">
+      <button class="btn btn-primary" onclick="window.print()">🖨 Print / Export</button>
+      <button class="btn" id="summaryCancel">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Discharge dialog (Doctor / Admin only) -->
+<div id="dischargeDialog" class="dialog-backdrop" hidden>
+  <div class="dialog">
+    <div class="dialog-head">
+      <h3 id="dischargeTitle">Discharge Patient</h3>
+      <button class="btn btn-close" id="dischargeCancel">✕</button>
+    </div>
+    <p class="small muted" style="margin:0;"><strong>Medicines Currently On The Chart (Auto-Attached)</strong></p>
+    <ul id="dischargeMeds" style="margin:6px 0 0; padding-left:18px;"></ul>
+    <label style="display:block; margin-top:14px; font-weight:600; font-size:13px;">Discharge Summary</label>
+    <textarea id="dischargeSummary" rows="5"
+      placeholder="Course in hospital, condition at discharge, follow-up instructions…"
+      style="margin-top:6px;"></textarea>
+    <p id="dischargeError" class="error" hidden></p>
+    <button id="dischargeConfirm" class="btn btn-primary btn-block" style="margin-top:6px; height:44px; font-size:14px; font-weight:600;">
+      ✓ Confirm Discharge &amp; Free Bed
+    </button>
+  </div>
+</div>
+
+<!-- Health status dialog (Doctor / Admin only) -->
+<div id="statusDialog" class="dialog-backdrop" hidden>
+  <div class="dialog">
+    <div class="dialog-head">
+      <h3>Update Health Status</h3>
+      <button class="btn btn-close" id="statusCancel">✕</button>
+    </div>
+    <p class="small muted" style="margin:0;">The card colour on the ward dashboard follows this status.</p>
+    <div id="statusOptions" class="grid gap-2"></div>
+    <p id="statusError" class="error" hidden></p>
+    <div class="row" style="margin-top: 8px;">
+      <button id="statusSave" class="btn btn-primary">Save Status</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/dropdown.js' %}"></script>
+<script src="{% static 'js/patient.js' %}"></script>
+{% endblock %}

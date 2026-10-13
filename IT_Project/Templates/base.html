@@ -1,0 +1,94 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>City General Hospital — ICU Case Taking</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body>
+  <div class="top-strip"></div>
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand">
+        <span class="logo">🩺 City General — ICU Case Taking</span>
+        <span class="badge-demo">Demo</span>
+      </div>
+      <nav id="main-nav">
+        <a href="/ward/" id="nav-ward" class="nav-link"><span class="nav-icon">🩺</span> Ward</a>
+        <a href="/orders/" id="nav-orders" class="nav-link"><span class="nav-icon">📋</span> Order Queue</a>
+        <a href="/blood-bank/" id="nav-blood" class="nav-link"><span class="nav-icon">🩸</span> Blood Bank</a>
+      </nav>
+    </div>
+    <div class="header-right">
+      <button id="themeToggle" class="theme-btn" title="Toggle theme">🎨 Theme</button>
+      <div id="user-box" class="user-box"></div>
+    </div>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>
+    <span>Demo prototype with dummy data only — no real patient information.</span>
+    <span class="contact">For any queries, contact admin —
+      ✉ admin@citygeneral-demo.in &nbsp;|&nbsp; ☎ 040-2345-6789 (landline)</span>
+  </footer>
+  <script src="{% static 'js/api.js' %}"></script>
+  <script>
+    // Theme setup - defaults to dark as in Retool AI design
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    const themeBtn = document.getElementById('themeToggle');
+    if (themeBtn) {
+      themeBtn.onclick = () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      };
+    }
+
+    // Highlight current active navigation tab
+    const pathname = window.location.pathname;
+    if (pathname.includes('/ward') || pathname.includes('/patient')) {
+      document.getElementById('nav-ward')?.classList.add('active');
+    } else if (pathname.includes('/orders')) {
+      document.getElementById('nav-orders')?.classList.add('active');
+    } else if (pathname.includes('/blood-bank')) {
+      document.getElementById('nav-blood')?.classList.add('active');
+    }
+
+    const isLoginPage = pathname === '/' || pathname === '/login/';
+    if (!isLoginPage) {
+      const staff = requireLogin();
+      if (staff && document.getElementById('user-box')) {
+        const roleCap = staff.role ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1).toLowerCase() : 'Staff';
+        const wardCode = staff.ward_code || (staff.ward_id === 3 ? 'ICU' : 'WARD-B');
+        document.getElementById('user-box').innerHTML = `
+          <div class="user-profile">
+            <span class="user-name">${staff.name}</span>
+            <span class="user-meta">${roleCap} · ${wardCode}</span>
+          </div>
+          <button class="btn btn-signout" onclick="logout()">↳ Sign out</button>
+        `;
+      }
+    } else {
+      // Hide navigation bar and header on login page
+      const headerLeft = document.querySelector('.header-left');
+      if (headerLeft) headerLeft.style.display = 'none';
+      const header = document.querySelector('.app-header');
+      if (header) {
+        header.style.background = 'transparent';
+        header.style.borderBottom = 'none';
+      }
+      const staff = getSession();
+      if (staff) { window.location.href = '/ward/'; }
+    }
+    function logout() { clearSession(); window.location.href = '/login/'; }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
