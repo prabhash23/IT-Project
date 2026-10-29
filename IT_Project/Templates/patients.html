@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
 <section class="page">
   <div class="top-nav-row">
-    <a class="back-link" href="/ward/">← Back to ward</a>
+    <a class="back-link" href="/ward/">&larr; Back to ward</a>
     <div class="patient-action-btns row" style="gap:8px;">
       <button id="statusBtn" class="btn patient-action-btn" hidden>Update health status</button>
-      <button id="dischargeBtn" class="btn patient-action-btn patient-discharge-btn" hidden>⇥ Discharge</button>
-      <button id="summaryBtn" class="btn patient-action-btn">🖨 Case summary</button>
+      <button id="dischargeBtn" class="btn patient-action-btn patient-discharge-btn" hidden>Discharge</button>
+      <button id="summaryBtn" class="btn patient-action-btn">Case summary</button>
     </div>
   </div>
 
@@ -34,22 +35,22 @@
   <div class="dialog dialog-large">
     <div class="dialog-head">
       <h3 id="summaryTitle">Patient Case Summary</h3>
-      <button class="btn btn-close" id="summaryClose">✕</button>
+      <button class="btn btn-close" id="summaryClose">&times;</button>
     </div>
     <div id="summaryBody" class="summary-body"></div>
     <div class="row" style="justify-content:flex-end; gap:8px; margin-top:14px;">
-      <button class="btn btn-primary" onclick="window.print()">🖨 Print / Export</button>
+      <button class="btn btn-primary" onclick="window.print()">Print / Export</button>
       <button class="btn" id="summaryCancel">Close</button>
     </div>
   </div>
 </div>
 
-<!-- Discharge Dialog — always dark, matches screenshot -->
+<!-- Discharge Dialog -->
 <div id="dischargeDialog" class="dialog-backdrop" hidden>
   <div class="dialog discharge-dialog">
     <div class="dialog-head">
       <h3 id="dischargeTitle" class="discharge-title">Discharge Patient</h3>
-      <button class="btn-close-x" id="dischargeCancel" aria-label="Close">✕</button>
+      <button class="btn-close-x" id="dischargeCancel" aria-label="Close">&times;</button>
     </div>
 
     <div class="discharge-meds-section">
@@ -72,8 +73,8 @@
 <div id="statusDialog" class="dialog-backdrop" hidden>
   <div class="dialog">
     <div class="dialog-head">
-      <h3>Update Health Status</h3>
-      <button class="btn btn-close" id="statusCancel">✕</button>
+      <h3 id="statusHeading">Update Health Status</h3>
+      <button class="btn btn-close" id="statusCancel">&times;</button>
     </div>
     <p class="small muted" style="margin:0;">The card colour on the ward dashboard follows this status.</p>
     <div id="statusOptions" class="grid gap-2"></div>

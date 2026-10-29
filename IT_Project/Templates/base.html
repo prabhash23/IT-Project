@@ -12,17 +12,17 @@
   <header class="app-header">
     <div class="header-left">
       <div class="brand">
-        <span class="logo">🩺 City General — ICU Case Taking</span>
+        <span class="logo">🏥 City General — ICU Case Taking</span>
         <span class="badge-demo">Demo</span>
       </div>
       <nav id="main-nav">
-        <a href="/ward/" id="nav-ward" class="nav-link"><span class="nav-icon">🩺</span> Ward</a>
+        <a href="/ward/" id="nav-ward" class="nav-link"><span class="nav-icon">🏥</span> Ward</a>
         <a href="/orders/" id="nav-orders" class="nav-link"><span class="nav-icon">📋</span> Order Queue</a>
         <a href="/blood-bank/" id="nav-blood" class="nav-link"><span class="nav-icon">🩸</span> Blood Bank</a>
       </nav>
     </div>
     <div class="header-right">
-      <button id="themeToggle" class="theme-btn" title="Toggle theme">🎨 Theme</button>
+      <button id="themeToggle" class="theme-btn" title="Toggle theme">🌓 Theme</button>
       <div id="user-box" class="user-box"></div>
     </div>
   </header>
@@ -32,7 +32,7 @@
   <footer>
     <span>Demo prototype with dummy data only — no real patient information.</span>
     <span class="contact">For any queries, contact admin —
-      ✉ admin@citygeneral-demo.in &nbsp;|&nbsp; ☎ 040-2345-6789 (landline)</span>
+      ✉️ admin@citygeneral-demo.in &nbsp;|&nbsp; 📞 040-2345-6789 (landline)</span>
   </footer>
   <script src="{% static 'js/api.js' %}"></script>
   <script>
@@ -70,9 +70,9 @@
         document.getElementById('user-box').innerHTML = `
           <div class="user-profile">
             <span class="user-name">${staff.name}</span>
-            <span class="user-meta">${roleCap} · ${wardCode}</span>
+            <span class="user-meta">${roleCap} &bull; ${wardCode}</span>
           </div>
-          <button class="btn btn-signout" onclick="logout()">↳ Sign out</button>
+          <button class="btn btn-signout" onclick="logout()">Sign out</button>
         `;
       }
     } else {

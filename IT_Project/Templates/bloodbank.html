@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
 <section class="page">
   <div class="page-head">
-    <div><h1>🩸 Blood bank availability</h1>
-      <p class="muted">Simulated real-time stock (demo). Orders placed from a patient case
-        deduct units here.</p></div>
+    <div>
+      <h1>🩸 Blood Bank Availability</h1>
+      <p class="muted">Simulated real-time stock (demo). Orders placed from a patient case deduct units here.</p>
+    </div>
     <button id="refresh" class="btn">Refresh</button>
   </div>
   <div id="stock" class="blood-grid"></div>

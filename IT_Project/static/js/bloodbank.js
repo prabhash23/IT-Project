@@ -3,36 +3,45 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&l
 const MAX_UNITS = 20;
 
 async function load() {
-  const boot = await api('/bootstrap/');
-  document.getElementById('stock').innerHTML = boot.bloodStock.map(b => {
-    const pct = Math.min(100, Math.round((b.units_available / MAX_UNITS) * 100));
-    const level = pct < 15 ? 'card-critical' : pct < 35 ? 'card-serious' : 'card-stable';
-    const levelLabel = pct < 15 ? 'LOW' : pct < 35 ? 'MEDIUM' : 'OK';
-    return `
-      <div class="card">
-        <div class="card-head">
-          <strong style="font-size:18px">${esc(b.blood_type)}</strong>
-          <span class="badge">${b.units_available} units · ${levelLabel}</span>
-        </div>
-        <div class="bar"><span style="width:${pct}%"></span></div>
-        ${staff.role === 'admin' ? `
-          <div class="row" style="margin-top:8px">
-            <input id="stock-${b.id}" inputmode="numeric" value="${b.units_available}" style="max-width:90px" />
-            <button class="btn" onclick="restock(${b.id})">Restock</button>
-          </div>` : ''}
-      </div>`;
-  }).join('');
+  try {
+    const boot = await api('/bootstrap/');
+    document.getElementById('stock').innerHTML = boot.bloodStock.map(b => {
+      const pct = Math.min(100, Math.round((b.units_available / MAX_UNITS) * 100));
+      const level = pct < 15 ? 'card-critical' : pct < 35 ? 'card-serious' : 'card-stable';
+      const levelLabel = pct < 15 ? 'LOW' : pct < 35 ? 'MEDIUM' : 'OK';
+      return `
+        <div class="card">
+          <div class="card-head">
+            <strong style="font-size:18px">${esc(b.blood_type)}</strong>
+            <span class="badge">${b.units_available} units &bull; ${levelLabel}</span>
+          </div>
+          <div class="bar"><span style="width:${pct}%"></span></div>
+          ${staff && staff.role === 'admin' ? `
+            <div class="row" style="margin-top:8px">
+              <input id="stock-${b.id}" inputmode="numeric" value="${b.units_available}" style="max-width:90px" />
+              <button class="btn" onclick="restock(${b.id})">Restock</button>
+            </div>` : ''}
+        </div>`;
+    }).join('');
+  } catch (err) {
+    console.error('Failed to load blood bank stock:', err);
+  }
 }
 
 async function restock(id) {
   const units = Number(document.getElementById('stock-' + id).value);
   if (Number.isNaN(units) || units < 0) return;
-  await api('/blood-stock/' + id + '/', {
-    method: 'POST',
-    body: JSON.stringify({ unitsAvailable: units }),
-  });
-  load();
+  try {
+    await api('/blood-stock/' + id + '/', {
+      method: 'POST',
+      body: JSON.stringify({ unitsAvailable: units }),
+    });
+    load();
+  } catch (err) {
+    alert('Could not restock: ' + err.message);
+  }
 }
 
-document.getElementById('refresh').onclick = load;
+const refreshBtn = document.getElementById('refresh');
+if (refreshBtn) refreshBtn.onclick = load;
 load();

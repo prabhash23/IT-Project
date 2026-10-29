@@ -19,26 +19,38 @@ function esc(s) {
 }
 
 async function load() {
-  const data = await api('/ward-patients/' + ICU_WARD_ID + '/');
-  document.getElementById('patients').innerHTML = data.patients.map(p => {
-    const sev = SEVERITY[p.condition_flag] || SEVERITY.stable;
-    const sexFormatted = p.sex === 'M' ? 'Male' : p.sex === 'F' ? 'Female' : 'Other';
-    const admitDate = fmtDate(p.admission_date);
-    return `
-      <div class="card ${sev.cls}" onclick="location.href='/patient/${p.id}/'">
-        <div class="card-head">
-          <strong class="patient-name">${esc(p.name)}</strong>
-          <span class="bed-pill">🛏 ${esc(p.bed_no)}</span>
-        </div>
-        <div class="pill-wrap">
-          <span class="pill ${sev.pillCls}">${sev.label}</span>
-        </div>
-        <div class="card-meta">${p.age} yrs · ${sexFormatted}</div>
-        <div class="card-meta">Admitted ${admitDate}</div>
-        <div class="card-reason">${esc(p.reason)}</div>
-        ${p.open_tests ? `<div class="pending-wrap"><span class="badge badge-pending">🔬 ${p.open_tests} test${p.open_tests > 1 ? 's' : ''} pending result</span></div>` : ''}
-      </div>`;
-  }).join('');
+  const container = document.getElementById('patients');
+  try {
+    const data = await api('/ward-patients/' + ICU_WARD_ID + '/');
+    if (!data || !data.patients || data.patients.length === 0) {
+      container.innerHTML = '<p class="muted" style="padding:16px;">No patients currently admitted to this ward.</p>';
+      return;
+    }
+    container.innerHTML = data.patients.map(p => {
+      const sev = SEVERITY[p.condition_flag] || SEVERITY.stable;
+      const sexFormatted = p.sex === 'M' ? 'Male' : p.sex === 'F' ? 'Female' : 'Other';
+      const admitDate = fmtDate(p.admission_date);
+      return `
+        <div class="card ${sev.cls}" onclick="location.href='/patient/${p.id}/'">
+          <div class="card-head">
+            <strong class="patient-name">${esc(p.name)}</strong>
+            <span class="bed-pill">Bed ${esc(p.bed_no)}</span>
+          </div>
+          <div class="pill-wrap">
+            <span class="pill ${sev.pillCls}">${sev.label}</span>
+          </div>
+          <div class="card-meta">${p.age} yrs &bull; ${sexFormatted}</div>
+          <div class="card-meta">Admitted ${admitDate}</div>
+          <div class="card-reason">${esc(p.reason)}</div>
+          ${p.open_tests ? `<div class="pending-wrap"><span class="badge badge-pending">Lab: ${p.open_tests} test${p.open_tests > 1 ? 's' : ''} pending result</span></div>` : ''}
+        </div>`;
+    }).join('');
+  } catch (err) {
+    console.error('Error loading ward patients:', err);
+    if (container) {
+      container.innerHTML = `<div class="error-box" style="padding:16px; color:#ef4444;">Could not load ward patients. Please check database connection.</div>`;
+    }
+  }
 }
 
 // Modal handling
@@ -57,7 +69,7 @@ if (dlg) {
   };
 }
 
-// Admit — admin only
+// Admit - admin only
 if (staff && staff.role === 'admin') {
   if (admitBtn) {
     admitBtn.hidden = false;

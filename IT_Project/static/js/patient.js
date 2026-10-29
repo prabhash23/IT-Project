@@ -7,13 +7,13 @@ const isNurse = staff && staff.role === 'nurse';
 const isDoctor = staff && staff.role === 'doctor';
 const isAdmin = staff && staff.role === 'admin';
 
-const canRecordVisits = true;                       // Nurse, Doctor, Admin can record doctor visits
-const canPrescribeMeds = isDoctor || isAdmin;       // Doctor, Admin prescribe medicines
-const canOrderSupplies = isNurse || isAdmin;        // Nurse, Admin order medicines & blood to pharmacy
+const canRecordVisits = true;                         // Nurse, Doctor, Admin can record doctor visits
+const canPrescribeMeds = isDoctor || isAdmin;         // Doctor, Admin prescribe medicines
+const canOrderSupplies = isNurse || isAdmin;          // Nurse, Admin order medicines & blood to pharmacy
 const canOrderTests = isNurse || isDoctor || isAdmin; // Nurse, Doctor, Admin order tests
-const canEnterTestResults = isDoctor || isAdmin;    // Doctor, Admin enter lab results
-const canDischarge = isDoctor || isAdmin;
-const canUpdateStatus = isDoctor || isAdmin;
+const canEnterTestResults = isDoctor || isAdmin;      // Doctor, Admin enter lab results
+const canDischarge = isDoctor || isAdmin;             // Doctor, Admin can discharge patient
+const canUpdateStatus = isDoctor || isAdmin;          // Doctor, Admin can update condition
 
 // ---------- helpers ----------
 const fmtDT = (iso) => {
@@ -33,36 +33,51 @@ const fmtDate = (iso) => {
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const cap = (s) => s ? String(s).charAt(0).toUpperCase() + String(s).slice(1).toLowerCase() : '';
 
+const SEVERITY = {
+  critical: { label: 'CRITICAL', cls: 'card-critical', pillCls: 'pill-critical' },
+  serious:  { label: 'SERIOUS',  cls: 'card-serious',  pillCls: 'pill-serious'  },
+  stable:   { label: 'STABLE',   cls: 'card-stable',   pillCls: 'pill-stable'   },
+};
+
 async function load() {
-  [master, currentCase] = await Promise.all([
-    api('/bootstrap/'),
-    api('/patient/' + patientId + '/'),
-  ]);
-  renderHead();
-  renderVisits();
-  renderPrescriptions();
-  renderTests();
-  renderNotes();
-  renderOrders();
-  setupDialogs();
-  setupCaseSummary();
+  try {
+    [master, currentCase] = await Promise.all([
+      api('/bootstrap/'),
+      api('/patient/' + patientId + '/'),
+    ]);
+    renderHead();
+    renderVisits();
+    renderPrescriptions();
+    renderTests();
+    renderNotes();
+    renderOrders();
+    setupDialogs();
+    setupCaseSummary();
+  } catch (err) {
+    console.error('Failed to load patient case:', err);
+    const headEl = document.getElementById('head');
+    if (headEl) {
+      headEl.innerHTML = `<div class="error-box" style="padding:16px; color:#ef4444;">Error loading patient details: ${esc(err.message)}</div>`;
+    }
+  }
 }
 
-// ---------- Header ----------
+// ---------- Header & Demographics ----------
 function renderHead() {
   const p = currentCase.patient;
-  const flagCls = { critical: 'pill-critical', serious: 'pill-serious', stable: 'pill-stable' }[p.condition_flag] || 'pill-stable';
+  const sev = SEVERITY[p.condition_flag] || SEVERITY.stable;
+  const flagCls = sev.pillCls;
   const sexFormatted = p.sex === 'M' ? 'Male' : p.sex === 'F' ? 'Female' : 'Other';
   const admitFormatted = fmtDate(p.admission_date);
 
   document.getElementById('head').innerHTML = `
     <div class="patient-title-row">
-      <h1 class="patient-headline">${esc(p.name)}</h1>
+      <h2 class="patient-name">${esc(p.name)}</h2>
       <span class="bed-pill">Bed ${esc(p.bed_no)}</span>
       <span class="ward-pill">${esc(p.ward_code || 'ICU')}</span>
       <span class="pill ${flagCls}">${p.condition_flag.toUpperCase()}</span>
     </div>
-    <p class="muted patient-subline">${p.age} yrs · ${sexFormatted} · Admitted ${admitFormatted} — ${esc(p.reason)}</p>
+    <p class="muted patient-subline">${p.age} yrs &bull; ${sexFormatted} &bull; Admitted ${admitFormatted} &mdash; ${esc(p.reason)}</p>
   `;
 }
 
@@ -75,17 +90,18 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
 }));
 
 // ---------- 1. Doctor Visits ----------
-let _visitDoctorId = '';   // tracks selection from combobox
-
 function renderVisits() {
   const box = document.getElementById('visits');
   const form = canRecordVisits ? `
     <div class="entry form-card">
-      <div class="row" style="gap:10px; align-items:flex-start; flex-wrap:wrap;">
-        <div id="visitDoctorCombo" style="flex:1; min-width:260px;"></div>
-        <button id="visitSave" class="btn btn-primary" style="margin-top:2px;">Add Visit</button>
+      <div class="row" style="gap:10px; align-items:center; flex-wrap:wrap;">
+        <select id="visitDoctorSelect" class="custom-select" style="flex:1; min-width:260px;">
+          <option value="">Pick visiting doctor...</option>
+          ${master.doctors.map(d => `<option value="${d.id}">${esc(d.name)} &mdash; ${esc(d.specialty)}</option>`).join('')}
+        </select>
+        <button id="visitSave" class="btn btn-primary">Add visit</button>
       </div>
-      <textarea id="visitNotes" rows="2" placeholder="Visit findings / plan…" style="margin-top:10px;"></textarea>
+      <textarea id="visitNotes" rows="2" placeholder="Visit findings / plan..." style="margin-top:8px;"></textarea>
       <p id="visitError" class="error" hidden></p>
     </div>` : '';
 
@@ -96,25 +112,16 @@ function renderVisits() {
         <span class="muted small">${fmtDT(v.visit_at)}</span>
       </div>
       <div style="margin: 6px 0;">${esc(v.notes)}</div>
-      <div class="muted small">${esc(v.specialty)} · Recorded By ${esc(v.recorded_by)}</div>
-    </div>`).join('') : '<p class="muted" style="padding:12px;">No Doctor Visits Recorded Yet.</p>');
+      <div class="muted small">${esc(v.specialty)} &bull; Recorded by ${esc(v.recorded_by)}</div>
+    </div>`).join('') : '<p class="muted" style="padding:12px;">No doctor visits recorded yet.</p>');
 
   if (canRecordVisits) {
-    _visitDoctorId = '';
-    const comboContainer = document.getElementById('visitDoctorCombo');
-    const doctorOptions = master.doctors.map(d => ({
-      value: String(d.id),
-      label: d.name + ' — ' + d.specialty
-    }));
-    buildDropdown(comboContainer, doctorOptions, '🔍 Pick Visiting Doctor…', (val) => {
-      _visitDoctorId = val;
-    });
-
     document.getElementById('visitSave').onclick = async () => {
+      const docSel = document.getElementById('visitDoctorSelect').value;
       const notesEl = document.getElementById('visitNotes');
       const err = document.getElementById('visitError');
       err.hidden = true;
-      if (!_visitDoctorId || !notesEl.value.trim()) {
+      if (!docSel || !notesEl.value.trim()) {
         err.textContent = 'Please pick a doctor and enter visit findings / notes.';
         err.hidden = false;
         return;
@@ -123,7 +130,7 @@ function renderVisits() {
         method: 'POST',
         body: JSON.stringify({
           patientId,
-          doctorId: Number(_visitDoctorId),
+          doctorId: Number(docSel),
           notes: notesEl.value.trim(),
           recordedBy: staff.name || staff.username
         })
@@ -145,7 +152,7 @@ function renderPrescriptions() {
         <p style="margin:0 0 10px; font-weight:600;">Prescribe Medication (Doctor)</p>
         <div class="row" style="flex-wrap:wrap; gap:8px;">
           <select id="rxMedicineSelect" class="custom-select" style="flex:1; min-width:220px;">
-            <option value="">Pick medicine…</option>
+            <option value="">Pick medicine...</option>
             ${master.medicines.map(m => `<option value="${m.id}">${esc(m.label)}</option>`).join('')}
           </select>
           <input id="rxDosage" placeholder="Dosage (e.g. 1 tab / 1 g IV)" style="max-width:180px;" />
@@ -162,7 +169,7 @@ function renderPrescriptions() {
         <p style="margin:0 0 10px; font-weight:600;">Order Medicine to Pharmacy (Nurse)</p>
         <div class="row" style="gap:8px;">
           <select id="rxOrderMedSelect" class="custom-select" style="flex:1;">
-            <option value="">Pick medicine…</option>
+            <option value="">Pick medicine...</option>
             ${master.medicines.map(m => `<option value="${m.id}">${esc(m.label)}</option>`).join('')}
           </select>
           <input id="rxOrderQty" type="number" min="1" value="1" placeholder="Qty" style="max-width:80px;" />
@@ -180,8 +187,8 @@ function renderPrescriptions() {
           <div>
             <strong>${esc(r.medicine_name)}</strong>
             <span class="muted small">${esc(r.form)} ${esc(r.strength)}</span>
-            <div style="margin-top:4px;">${esc(r.dosage)} · ${esc(r.frequency)} · ${r.duration_days} day(s)</div>
-            <div class="muted small">Prescribed by ${esc(r.prescribed_by)} · ${fmtDT(r.prescribed_at)}</div>
+            <div style="margin-top:4px;">${esc(r.dosage)} &bull; ${esc(r.frequency)} &bull; ${r.duration_days} day(s)</div>
+            <div class="muted small">Prescribed by ${esc(r.prescribed_by)} &bull; ${fmtDT(r.prescribed_at)}</div>
           </div>
           <span class="badge ${r.status === 'active' ? 'badge-success' : ''}">${cap(r.status)}</span>
         </div>
@@ -194,8 +201,8 @@ function renderPrescriptions() {
         <div class="entry-head">
           <div>
             <strong>${esc(o.medicine_name)}</strong>
-            <span class="muted small">${esc(o.form)} ${esc(o.strength)} × ${o.quantity}</span>
-            <div class="muted small">Ordered by ${esc(o.placed_by)} · ${fmtDT(o.placed_at)}</div>
+            <span class="muted small">${esc(o.form)} ${esc(o.strength)} &times; ${o.quantity}</span>
+            <div class="muted small">Ordered by ${esc(o.placed_by)} &bull; ${fmtDT(o.placed_at)}</div>
           </div>
           <span class="badge">${cap(o.status)}</span>
         </div>
@@ -261,7 +268,7 @@ function renderTests() {
     <div class="entry form-card">
       <div class="row" style="gap:8px;">
         <select id="testPickSelect" class="custom-select" style="flex:1;">
-          <option value="">Pick a test to order…</option>
+          <option value="">Pick a test to order...</option>
           ${master.tests.map(t => `<option value="${t.id}">${esc(t.name)} (${esc(t.category)})</option>`).join('')}
         </select>
         <button id="testSave" class="btn btn-primary">Order test</button>
@@ -275,7 +282,7 @@ function renderTests() {
         <div>
           <strong>${esc(o.test_name)}</strong>
           <span class="muted small">(${esc(o.category)})</span>
-          <div class="muted small">Ordered by ${esc(o.ordered_by)} · ${fmtDT(o.ordered_at)}</div>
+          <div class="muted small">Ordered by ${esc(o.ordered_by)} &bull; ${fmtDT(o.ordered_at)}</div>
         </div>
         <span class="badge ${o.status === 'ordered' ? 'badge-warning' : 'badge-success'}">
           ${o.status === 'ordered' ? 'Awaiting Result' : 'Result Available'}
@@ -285,7 +292,7 @@ function renderTests() {
         <div class="result-box" style="margin-top:8px;">
           <div style="font-weight:600;">${esc(o.result_value)}</div>
           ${o.result_notes ? `<div class="muted small" style="margin-top:2px;">${esc(o.result_notes)}</div>` : ''}
-          <div class="muted small" style="margin-top:4px;">Reported by ${esc(o.result_by)} · ${fmtDT(o.result_at)}</div>
+          <div class="muted small" style="margin-top:4px;">Reported by ${esc(o.result_by)} &bull; ${fmtDT(o.result_at)}</div>
         </div>` : canEnterTestResults ? `
         <div id="resultForm-${o.id}" hidden class="result-box" style="margin-top:8px;">
           <textarea id="resVal-${o.id}" rows="2" placeholder="Result findings (e.g. Hb 11.2 g/dL, WBC 14,000)"></textarea>
@@ -341,7 +348,7 @@ function abnormalVitals(n) {
   const sys = Number((n.bp || '').split('/')[0]) || 0;
   if (pulse && (pulse > 100 || pulse < 50)) flags.push('Pulse ' + pulse);
   if (spo2 < 94) flags.push('SpO2 ' + spo2 + '%');
-  if (temp && (temp >= 100.4 || temp < 96)) flags.push('Temp ' + temp + '°F');
+  if (temp && (temp >= 100.4 || temp < 96)) flags.push('Temp ' + temp + '&deg;F');
   if (resp && (resp > 24 || resp < 10)) flags.push('Resp ' + resp);
   if (sys && (sys >= 180 || sys < 90)) flags.push('BP ' + n.bp);
   return flags;
@@ -355,7 +362,7 @@ function renderNotes() {
       <div class="vitals-input-row">
         <input id="vBp" placeholder="BP (120/80)" />
         <input id="vPulse" inputmode="numeric" placeholder="Pulse" />
-        <input id="vTemp" inputmode="decimal" placeholder="Temp °F" />
+        <input id="vTemp" inputmode="decimal" placeholder="Temp (&deg;F)" />
         <input id="vSpo2" inputmode="numeric" placeholder="SpO2 %" />
         <input id="vResp" inputmode="numeric" placeholder="Resp" />
         <button id="noteSave" class="btn btn-primary btn-add-note">Add note</button>
@@ -364,7 +371,7 @@ function renderNotes() {
     </div>` : '';
 
   box.innerHTML = form + (currentCase.nursingNotes.length ? currentCase.nursingNotes.map(n => {
-    const flags = abnormalVitals(n).map(f => `<span class="flag">⚠ ${esc(f)}</span>`).join('');
+    const flags = abnormalVitals(n).map(f => `<span class="flag">⚠️ ${esc(f)}</span>`).join('');
     return `
       <div class="entry">
         <div class="entry-head">
@@ -375,10 +382,10 @@ function renderNotes() {
         ${flags ? `<div style="margin: 6px 0;">${flags}</div>` : ''}
         <div class="vitals">
           ${n.bp ? `<span>BP: ${esc(n.bp)}</span>` : ''}
-          ${n.pulse ? `<span>· Pulse: ${n.pulse} bpm</span>` : ''}
-          ${n.temp_c ? `<span>· Temp: ${n.temp_c}°F</span>` : ''}
-          ${n.spo2 ? `<span>· SpO2: ${n.spo2}%</span>` : ''}
-          ${n.resp ? `<span>· Resp: ${n.resp} /min</span>` : ''}
+          ${n.pulse ? `<span>&bull; Pulse: ${n.pulse} bpm</span>` : ''}
+          ${n.temp_c ? `<span>&bull; Temp: ${n.temp_c}&deg;F</span>` : ''}
+          ${n.spo2 ? `<span>&bull; SpO2: ${n.spo2}%</span>` : ''}
+          ${n.resp ? `<span>&bull; Resp: ${n.resp} /min</span>` : ''}
         </div>
       </div>`;
   }).join('') : '<p class="muted">No nursing notes recorded yet.</p>');
@@ -386,13 +393,13 @@ function renderNotes() {
   if (document.getElementById('noteSave')) {
     document.getElementById('noteSave').onclick = async () => {
       const noteEl = document.getElementById('noteText');
-      const err = document.getElementById('noteError');
-      err.hidden = true;
       const vBp = document.getElementById('vBp');
       const vPulse = document.getElementById('vPulse');
       const vTemp = document.getElementById('vTemp');
       const vSpo2 = document.getElementById('vSpo2');
       const vResp = document.getElementById('vResp');
+      const err = document.getElementById('noteError');
+      err.hidden = true;
       if (!noteEl.value.trim() && !vBp.value.trim() && !vPulse.value && !vTemp.value && !vSpo2.value && !vResp.value) {
         err.textContent = 'Please enter a nursing note or at least one vital sign.';
         err.hidden = false;
@@ -424,7 +431,7 @@ function renderOrders() {
       <p class="orders-form-title">Order medicine to pharmacy (demo)</p>
       <div class="row" style="gap:8px;">
         <select id="phMedSelect" class="custom-select" style="flex:1;">
-          <option value="">Pick medicine…</option>
+          <option value="">Pick medicine...</option>
           ${master.medicines.map(m => `<option value="${m.id}">${esc(m.label)}</option>`).join('')}
         </select>
         <input id="phQty" type="number" min="1" value="1" placeholder="Qty" style="max-width:80px;" />
@@ -436,8 +443,8 @@ function renderOrders() {
       <p class="orders-form-title">Order blood units for this patient (demo)</p>
       <div class="row" style="gap:8px;">
         <select id="blTypeSelect" class="custom-select" style="flex:1;">
-          <option value="">Pick blood type…</option>
-          ${master.bloodStock.map(b => `<option value="${b.blood_type}">${b.blood_type} — ${b.units_available} unit(s) available</option>`).join('')}
+          <option value="">Pick blood type...</option>
+          ${master.bloodStock.map(b => `<option value="${b.blood_type}">${b.blood_type} &mdash; ${b.units_available} unit(s) available</option>`).join('')}
         </select>
         <input id="blUnits" type="number" min="1" value="1" placeholder="Units" style="max-width:80px;" />
         <button id="blSave" class="btn btn-primary">Place blood order</button>
@@ -453,8 +460,8 @@ function renderOrders() {
           <div class="entry-head">
             <div>
               <strong>${esc(o.medicine_name)}</strong>
-              <span class="muted small">${esc(o.form)} ${esc(o.strength)} × ${o.quantity}</span>
-              <div class="muted small">By ${esc(o.placed_by)} · ${fmtDT(o.placed_at)}</div>
+              <span class="muted small">${esc(o.form)} ${esc(o.strength)} &times; ${o.quantity}</span>
+              <div class="muted small">By ${esc(o.placed_by)} &bull; ${fmtDT(o.placed_at)}</div>
             </div>
             <span class="badge">${cap(o.status)}</span>
           </div>
@@ -468,8 +475,8 @@ function renderOrders() {
         <div class="entry">
           <div class="entry-head">
             <div>
-              <strong>${esc(o.blood_type)}</strong> · ${o.units} unit(s)
-              <div class="muted small">By ${esc(o.placed_by)} · ${fmtDT(o.placed_at)}</div>
+              <strong>${esc(o.blood_type)}</strong> &bull; ${o.units} unit(s)
+              <div class="muted small">By ${esc(o.placed_by)} &bull; ${fmtDT(o.placed_at)}</div>
             </div>
             <span class="badge">${cap(o.status)}</span>
           </div>
@@ -544,7 +551,7 @@ function setupDialogs() {
       document.getElementById('dischargeTitle').textContent = 'Discharge ' + p.name;
       const active = currentCase.prescriptions.filter(r => r.status === 'active');
       document.getElementById('dischargeMeds').innerHTML = active.length ? active.map(r =>
-        `<li><strong>${esc(r.medicine_name)}</strong> ${esc(r.form)} ${esc(r.strength)} — ${esc(r.dosage)}, ${esc(r.frequency)}, ${r.duration_days} day(s)</li>`
+        `<li><strong>${esc(r.medicine_name)}</strong> ${esc(r.form)} ${esc(r.strength)} &mdash; ${esc(r.dosage)}, ${esc(r.frequency)}, ${r.duration_days} day(s)</li>`
       ).join('') : '<li class="muted">No active medicines.</li>';
       document.getElementById('dischargeSummary').value = '';
       dischargeDialog.hidden = false;
@@ -645,22 +652,22 @@ function setupCaseSummary() {
 
         <div class="summary-section">
           <h4>Active Medications (${activeRx.length})</h4>
-          ${activeRx.length ? `<ul>${activeRx.map(r => `<li><strong>${esc(r.medicine_name)}</strong> (${esc(r.form)} ${esc(r.strength)}) — ${esc(r.dosage)}, ${esc(r.frequency)}, ${r.duration_days} day(s) (by ${esc(r.prescribed_by)})</li>`).join('')}</ul>` : '<p class="muted">No active medications.</p>'}
+          ${activeRx.length ? `<ul>${activeRx.map(r => `<li><strong>${esc(r.medicine_name)}</strong> (${esc(r.form)} ${esc(r.strength)}) &mdash; ${esc(r.dosage)}, ${esc(r.frequency)}, ${r.duration_days} day(s) (by ${esc(r.prescribed_by)})</li>`).join('')}</ul>` : '<p class="muted">No active medications.</p>'}
         </div>
 
         <div class="summary-section">
-          <h4>Doctor Visits & Clinical Notes (${currentCase.visits.length})</h4>
-          ${currentCase.visits.length ? currentCase.visits.map(v => `<p>• <strong>${esc(v.doctor_name)}</strong> (${esc(v.specialty)}, ${fmtDT(v.visit_at)}): ${esc(v.notes)}</p>`).join('') : '<p class="muted">No visits recorded.</p>'}
+          <h4>Doctor Visits &amp; Clinical Notes (${currentCase.visits.length})</h4>
+          ${currentCase.visits.length ? currentCase.visits.map(v => `<p>&bull; <strong>${esc(v.doctor_name)}</strong> (${esc(v.specialty)}, ${fmtDT(v.visit_at)}): ${esc(v.notes)}</p>`).join('') : '<p class="muted">No visits recorded.</p>'}
         </div>
 
         <div class="summary-section">
-          <h4>Laboratory Tests & Results (${currentCase.testOrders.length})</h4>
-          ${currentCase.testOrders.length ? currentCase.testOrders.map(t => `<p>• <strong>${esc(t.test_name)}</strong>: ${t.result_value ? esc(t.result_value) + (t.result_notes ? ` (${esc(t.result_notes)})` : '') : '<span class="muted">Awaiting result</span>'}</p>`).join('') : '<p class="muted">No tests ordered.</p>'}
+          <h4>Laboratory Tests &amp; Results (${currentCase.testOrders.length})</h4>
+          ${currentCase.testOrders.length ? currentCase.testOrders.map(t => `<p>&bull; <strong>${esc(t.test_name)}</strong>: ${t.result_value ? esc(t.result_value) + (t.result_notes ? ` (${esc(t.result_notes)})` : '') : '<span class="muted">Awaiting result</span>'}</p>`).join('') : '<p class="muted">No tests ordered.</p>'}
         </div>
 
         <div class="summary-section">
-          <h4>Recent Vitals & Nursing Observations</h4>
-          ${latestNotes.length ? latestNotes.map(n => `<p>• [${fmtDT(n.recorded_at)}] <strong>${esc(n.nurse_name)}:</strong> ${esc(n.note)} <span class="muted">(BP: ${n.bp || '-'}, Pulse: ${n.pulse || '-'}, Temp: ${n.temp_c || '-'}°F, SpO2: ${n.spo2 || '-'}%)</span></p>`).join('') : '<p class="muted">No nursing notes.</p>'}
+          <h4>Recent Vitals &amp; Nursing Observations</h4>
+          ${latestNotes.length ? latestNotes.map(n => `<p>&bull; [${fmtDT(n.recorded_at)}] <strong>${esc(n.nurse_name)}:</strong> ${esc(n.note)} <span class="muted">(BP: ${n.bp || '-'}, Pulse: ${n.pulse || '-'}, Temp: ${n.temp_c || '-'}&deg;F, SpO2: ${n.spo2 || '-'}%)</span></p>`).join('') : '<p class="muted">No nursing notes.</p>'}
         </div>
       `;
       dlg.hidden = false;

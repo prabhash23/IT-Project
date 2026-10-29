@@ -1,10 +1,11 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
 <section class="page">
   <div class="page-head">
     <div>
       <h1>ICU / High Dependency</h1>
-      <p class="muted">Admitted ICU patients — this demo covers the ICU ward only</p>
+      <p class="muted">Admitted ICU patients &mdash; this demo covers the ICU ward only</p>
     </div>
     <button id="admitBtn" class="btn btn-primary" hidden>+ Admit patient</button>
   </div>
@@ -14,7 +15,11 @@
       <p id="admitError" class="error" hidden></p>
       <input id="adName" placeholder="Patient name" />
       <input id="adAge" inputmode="numeric" placeholder="Age" />
-      <select id="adSex"><option value="F">Female</option><option value="M">Male</option><option value="O">Other</option></select>
+      <select id="adSex">
+        <option value="F">Female</option>
+        <option value="M">Male</option>
+        <option value="O">Other</option>
+      </select>
       <input id="adBed" placeholder="Bed (e.g. ICU-15)" />
       <textarea id="adReason" placeholder="Reason for admission"></textarea>
       <div class="row">

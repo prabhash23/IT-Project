@@ -18,6 +18,18 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.trycloudflare.com',
+    'https://*.loca.lt',
+    'https://*.ngrok-free.app',
+    'https://*.ngrok.io',
+    'https://*.pinggy.link',
+    'https://*.lhr.life',
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'http://172.16.143.66:8000',
+]
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -50,7 +62,6 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
             BASE_DIR / 'Templates',
-            BASE_DIR.parent / 'Templates',
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -108,7 +119,6 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
-    BASE_DIR.parent / 'static',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
